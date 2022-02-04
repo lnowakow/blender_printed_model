@@ -16,7 +16,9 @@ def shift_origin(obj):
 
 def import_gcode(filepath):
     if not bpy.context.scene.my_tool.subdivide:
-        bpy.context.scene.my_tool.subdivide = True
+        C.scene.my_tool.subdivide = True
+    if not bpy.context.scene.my_tool.split_layers:
+        C.scene.my_tool.split_layers = True
     bpy.ops.wm.gcode_import(filepath=filepath)
 
 
@@ -75,12 +77,19 @@ def save_render2(num_rotation_steps=2, h_range=[30, 80], bckg_transparent=True):
     
     #camera.constraints.remove(track_to)
 
+def change_mesh_direction():
+    if not bpy.context.object.mode == 'EDIT':
+        bpy.ops.object.mode_set(mode='EDIT')
+        
+    bpy.data.scenes['Scene'].cursor.location.z = 100
+    
+    
 
 if __name__ == "__main__":
     
     # Fresh slate
     if bpy.context.object.mode == 'EDIT':
-        bpy.ops.pbject.mode_set(mode='OBJECT')
+        bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
     
     for obj in list(bpy.context.scene.objects):
@@ -92,8 +101,8 @@ if __name__ == "__main__":
     camera_object = bpy.data.objects.new('Camera', camera_data)
     bpy.context.scene.collection.objects.link(camera_object)
     camera_object.location = [2,2,2]
-          
+      
     import_gcode(gcode_file_path)
-    transform_model('Gcode')
-    save_render2(h_range=[5,60])
+    #transform_model('Gcode')
+    #save_render2(h_range=[5,60])
     
