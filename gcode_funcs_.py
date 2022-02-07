@@ -16,13 +16,13 @@ def shift_origin(obj):
 
 def import_gcode(filepath):
     if not bpy.context.scene.my_tool.subdivide:
-        C.scene.my_tool.subdivide = True
+        bpy.context.scene.my_tool.subdivide = True
     if not bpy.context.scene.my_tool.split_layers:
-        C.scene.my_tool.split_layers = True
+        bpy.context.scene.my_tool.split_layers = True
     bpy.ops.wm.gcode_import(filepath=filepath)
 
 
-def transform_model(name):
+def transform_model(name, num_layers=100):
     #print_model holds all relevant data about Gcode
     print_model = bpy.context.scene.objects[name]
 
@@ -32,15 +32,14 @@ def transform_model(name):
 
     # change origin of gcode to center of print_model
     shift_origin(print_model)
-
-    # Convert to CURVE
-    bpy.ops.object.convert(target='CURVE')
-    # Make tool path populated with "filament"
-    print_model.data.bevel_depth = 0.4
     
     # Scale the model down to real size
     print_model.scale *= 0.01
     print_model.location = [0,0,0]
+    
+    bpy.ops.object.modifier_add(type='BULID')
+    print_model.modifiers['BUILD'].length = num_layers
+    
 
 
 def save_render2(num_rotation_steps=2, h_range=[30, 80], bckg_transparent=True):
@@ -49,7 +48,7 @@ def save_render2(num_rotation_steps=2, h_range=[30, 80], bckg_transparent=True):
     # set radius vector in polar coords
     r = Vector((camera.location[0], camera.location[1], camera.location[2])).length    
     # set target
-    target = bpy.data.objects['Gcode']
+    target = bpy.data.objects['print_model']
     t_loc_x = target.location.x
     t_loc_y = target.location.y
     bpy.context.view_layer.objects.active = target
@@ -77,19 +76,30 @@ def save_render2(num_rotation_steps=2, h_range=[30, 80], bckg_transparent=True):
     
     #camera.constraints.remove(track_to)
 
-def change_mesh_direction():
-    if not bpy.context.object.mode == 'EDIT':
-        bpy.ops.object.mode_set(mode='EDIT')
-        
-    bpy.data.scenes['Scene'].cursor.location.z = 100
+def delete_layer_0():
+    # Deselect all objects
+    bpy.ops.object.select_all(action='DESELECT')
+    # select layer 0
+    bpy.data.objects['0'].select_set(state=True)
+    bpy.ops.object.delete()
     
-    
+def merge_layers():
+    for obj in bpy.data.collections['Layers'].all_objects:
+        # select layer object
+        bpy.context.view_layer.objects.active = obj
+        bpy.context.active_object.select_set(state=True)
+        # Convert to CURVE
+        bpy.ops.object.convert(target='CURVE')
+        # Make tool path populated with "filament"
+        obj.data.bevel_depth = 0.4
+    bpy.context.view_layer.objects.active = bpy.data.objects['1']
+    bpy.context.active_object.select_set(state=True)
+    bpy.ops.object.join()
+    bpy.data.objects['1'].name = 'print_model'
 
 if __name__ == "__main__":
     
     # Fresh slate
-    if bpy.context.object.mode == 'EDIT':
-        bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
     
     for obj in list(bpy.context.scene.objects):
@@ -103,6 +113,12 @@ if __name__ == "__main__":
     camera_object.location = [2,2,2]
       
     import_gcode(gcode_file_path)
-    #transform_model('Gcode')
-    #save_render2(h_range=[5,60])
+    delete_layer_0()
+    num_layers = len(bpy.data.collections['Layers'].all_objects)
+    merge_layers()
+    #transform_model('print_model')
+    
+    
+    
+   # save_render2(h_range=[5,60])
     
