@@ -19,7 +19,8 @@ Where:
 ## No Module Errors
 
 To add **dotenv** module to Blender, use the following steps:
-<span style="color:red"> **WARNING:** Make sure when you do pip install you use same python version as blender is using!</span>
+
+<span style="color: red;"> **WARNING:** Make sure when you do pip install you use same python version as blender is using!</span>
 
 In my case, Blender is using python3.9:
 
