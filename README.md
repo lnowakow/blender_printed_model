@@ -23,7 +23,10 @@ To add **dotenv** module to Blender, use the following steps:
 
 In my case, Blender is using python3.9:
 
-Step 1: python3.9 -m pip install python-dotenv
+Step 1:
+```console
+lukasz@lukasz:~$ python3.9 -m pip install python-dotenv
+```
 Step 2:
 ```console
 lukasz@lukasz:~$ python3.9
