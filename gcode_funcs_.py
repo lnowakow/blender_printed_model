@@ -1,5 +1,6 @@
 import sys
-path = "/home/lukasz/workspace/blender_printed_model/"
+import os
+path = os.getenv('PROJECT_PATH')
 if path not in sys.path:
     sys.path.append(path)
 from imp import reload
@@ -7,7 +8,6 @@ import gcode_api_
 reload(gcode_api_)
 
 import bpy
-import os
 import numpy as np
 from glob import glob
 
@@ -46,12 +46,12 @@ class RandomPrint:
 def get_filename(arr, i):
     return arr[i % len(arr)]
   
-gcode_file_path = "/home/lukasz/workspace/blender_spag_generation/gcodes/10.gcode"
-gcode_dir = "/home/lukasz/workspace/blender_spag_generation/gcodes/"
-out_path = "/home/lukasz/workspace/blender_printed_model/pictures/"
+gcode_dir = os.getenv('GCODE_DIR')
+out_path = os.getenv('OUT_PATH')
 
 
 if __name__ == "__main__":
+    print(gcode_dir)
     # Fresh slate
     bpy.ops.object.select_all(action='DESELECT')
     gcode_api_.delete_all_obj(['LIGHT', 'CURVE', 'CAMERA'])
