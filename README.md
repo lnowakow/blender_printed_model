@@ -6,7 +6,7 @@ This repository automatically renders gcode into photorealistic 3d-printed model
 
 In your project directory, define a .env file with the following key:value pairs.
 
-```json
+```console
 PROJECT_PATH="/home/lukasz/workspace/blender_printed_model"
 GCODE_DIR="/home/lukasz/workspace/blender_spag_generation/gcodes/"
 OUT_PATH="/home/lukasz/workspace/blender_printed_model/pictures/"
@@ -23,14 +23,16 @@ To add **dotenv** module to Blender, use the following steps:
 
 In my case, Blender is using python3.9:
 
-1- python3.9 -m pip install python-dotenv
-2- ```console
+Step 1: python3.9 -m pip install python-dotenv
+Step 2:
+```console
 lukasz@lukasz:~$ python3.9
 >>> import dotenv
 >>> dotenv.__file__
 /home/lukasz/.local/lib/python3.9/site-packages/dotenv/__init__.py
 ```
-3- ```console
+Step 3:
+```console
 lukasz@lukasz:~$ sudo cp -r ~/.local/lib/python3.9/site-packages/dotenv /PATH-TO-BLENDER/3.0/python/lib/python3.9/site-packages/
 ```
 
