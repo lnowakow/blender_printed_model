@@ -1,3 +1,4 @@
 pictures/*.png
 .idea/
 __pycache__/
+.env
