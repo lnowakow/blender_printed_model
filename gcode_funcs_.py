@@ -1,5 +1,7 @@
 import sys
 import os
+from dotenv import load_dotenv
+load_dotenv()
 path = os.getenv('PROJECT_PATH')
 if path not in sys.path:
     sys.path.append(path)
@@ -25,7 +27,7 @@ class RandomPrint:
         self.h_range = h_range
         self.bckg_transparent = bckg_transparent
         
-    def __call__(self, gcode_file):
+    def __call__(self, gcode_file, with_failure=False):
         
         num_lights = gcode_api_.rand_unif_range(self.num_lights, is_real=False)
         gcode_api_.add_lights(num_lights=num_lights, light_energy=self.light_energy, range_l=self.range_l)
@@ -33,8 +35,18 @@ class RandomPrint:
         gcode_api_.import_gcode(gcode_file)
         gcode_api_.delete_layer_0()
         num_layers = len(bpy.data.collections['Layers'].all_objects)
-        gcode_api_.merge_layers()
+        if with_failure:
+            min_failed = round(num_layers/6)
+            max_failed = round(num_layers/2)
+    
+            failed_layers = gcode_api_.rand_unif_range([min_failed, max_failed], is_real=False)
+            print(f"Number of layers that will fail: {failed_layers}")
+            for i in range(failed_layers):
+                gcode_api_.rand_vertex_move(bpy.data.objects[str(num_layers-i)])
+                print("Done layer " + str(num_layers-i))
+        gcode_api_.merge_layers(num_layers, failed_layers, with_failure=with_failure)
         gcode_api_.transform_model('print_model', num_layers)
+        gcode_api_.transform_model('failed_model')
 
         diffuse_color = gcode_api_.rand_populate_arr(self.diffuse_color, gcode_api_.rand_unif_range, 3)
         diffuse_color.append(1.0)
@@ -54,7 +66,7 @@ if __name__ == "__main__":
     print(gcode_dir)
     # Fresh slate
     bpy.ops.object.select_all(action='DESELECT')
-    gcode_api_.delete_all_obj(['LIGHT', 'CURVE', 'CAMERA'])
+    gcode_api_.delete_all_obj(['LIGHT', 'CURVE', 'CAMERA', 'MESH'])
     
     # Add Camera to scene
     camera_data = bpy.data.cameras.new(name='Camera')
@@ -69,12 +81,12 @@ if __name__ == "__main__":
                                 num_lights=[1,3], light_energy=[20,50], range_l=[1.0,2.5],\
                                 num_rotation_steps=2, save=False, h_range=[20,50], bckg_transparent=True)
     gcode_files = glob(os.path.join(gcode_dir, "*"))
-    num_imgs_to_save = 1000
+    num_imgs_to_save = 1
     num_gcodes_used = 0
     for i in range(num_imgs_to_save):
         gcode_file = get_filename(gcode_files, num_gcodes_used)
         print("Processing: " + gcode_file)
-        rand_print(gcode_file=gcode_file)
+        rand_print(gcode_file=gcode_file, with_failure=True)
         num_gcodes_used += 1
         gcode_api_.delete_all_obj(['LIGHT', 'CURVE'])
         camera_object.location = [1.5,1.5,1.5]

@@ -2,3 +2,4 @@ pictures/*.png
 .idea/
 __pycache__/
 .env
+pictures_cropped/

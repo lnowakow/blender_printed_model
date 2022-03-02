@@ -2,8 +2,8 @@ import bpy
 from glob import glob
 import numpy as np
 import os
-import math
 import random
+import math
 from mathutils import Matrix, Vector
 
 def shift_origin(obj):
@@ -36,8 +36,8 @@ def transform_model(name, num_layers=100):
     print_model.scale *= 0.01
     print_model.location = [0, 0, 0]
 
-    bpy.ops.object.modifier_add(type='BUILD')
-    print_model.modifiers['Build'].frame_duration = num_layers
+    #bpy.ops.object.modifier_add(type='BUILD')
+    #print_model.modifiers['Build'].frame_duration = num_layers
 
 
 def save_render2(path_out, num_layers, num_rotation_steps=2, h_range=[30, 80], bckg_transparent=True):
@@ -51,7 +51,7 @@ def save_render2(path_out, num_layers, num_rotation_steps=2, h_range=[30, 80], b
     t_loc_y = target.location.y
     bpy.context.view_layer.objects.active = target
     bpy.context.active_object.select_set(state=True)
-
+    
     # Add a new track to constraint and set it to track your object
     bpy.context.view_layer.objects.active = camera
     track_to = bpy.context.object.constraints.new('TRACK_TO')
@@ -75,8 +75,9 @@ def save_render2(path_out, num_layers, num_rotation_steps=2, h_range=[30, 80], b
         camera.location.y = y
         camera.location.z = z
 
-        bpy.context.scene.frame_set(random.randint(2, num_layers))
-
+        #bpy.context.scene.frame_set(random.randint(2, num_layers))
+        #bpy.context.scene.frame_set(num_layers)
+        
         file = os.path.join(path_out, str(step_num))
         if bckg_transparent:
             bpy.context.scene.render.film_transparent = True
@@ -98,13 +99,19 @@ def delete_layer_0():
     bpy.ops.object.delete()
 
 
-def merge_layers():
+def merge_layers(num_layers, failed_layers=0, with_failure=False):
     for obj in bpy.data.collections['Layers'].all_objects:
         obj.select_set(True)
     bpy.context.view_layer.objects.active = bpy.data.objects['1']
     bpy.context.active_object.select_set(state=True)
     # Convert to CURVE
     bpy.ops.object.convert(target='CURVE')
+    
+    # Deselect failed layers
+    for i in range(failed_layers):
+        bpy.data.objects[str(num_layers-i)].select_set(False)
+        print(f'failed layer {num_layers-i} deselected')
+    
     # Make tool path populated with "filament"
     bpy.ops.object.join()
     print_model = bpy.data.objects['1']
@@ -114,7 +121,22 @@ def merge_layers():
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.transform.tilt(value=1.5707)
     bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.context.view_layer.objects.active = bpy.data.objects[str(num_layers)]
+    bpy.context.active_object.select_set(state=True)
+    print_model.select_set(False)
 
+    # Failed Layers
+    for i in range(failed_layers):
+        bpy.data.objects[str(num_layers-i)].select_set(True)
+        print(f'selected failed layer {num_layers-i}')   
+
+    
+    bpy.ops.object.join()
+
+    failed_model = bpy.data.objects[str(num_layers)]
+    failed_model.name = 'failed_model'
+    failed_model.data.bevel_depth = 0.1
+    
 
 def add_lights(num_lights, light_energy=[10, 50], range_l=[1.0, 2.5]):
     # Inserts lights
@@ -148,7 +170,7 @@ def delete_all_obj(types):
 
 
 def edit_part_appearance(diffuse_color=[0.8, 0.2, 0.2, 1.0]):
-    # Retrun to object mode
+    # Return to object mode
     bpy.ops.object.mode_set(mode='OBJECT')
 
     print = bpy.data.objects['print_model']
@@ -173,3 +195,23 @@ def rand_unif_range(range, is_real=True):
 def rand_populate_arr(range_arr, func, size):
     res = [func(range_arr) for i in range(size)]
     return res
+
+def rand_normal(scale=1):
+    return np.random.normal(scale=scale)
+
+def rand_vertex_move(obj):
+    
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.context.active_object.select_set(state=True)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    
+    mesh = obj.data
+    mat_world = obj.matrix_world
+    for i in range(len(mesh.vertices)):
+        vert = mesh.vertices[i]
+        vec = Vector((rand_normal(1), rand_normal(1), rand_normal(0.2)))
+        mat_edit = mat_world.inverted() @ Matrix.Translation(vec) @ mat_world
+        vert.co = mat_edit @ vert.co
+
+        
