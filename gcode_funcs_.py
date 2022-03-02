@@ -35,6 +35,12 @@ class RandomPrint:
         gcode_api_.import_gcode(gcode_file)
         gcode_api_.delete_layer_0()
         num_layers = len(bpy.data.collections['Layers'].all_objects)
+        
+        diffuse_color = gcode_api_.rand_populate_arr(self.diffuse_color, gcode_api_.rand_unif_range, 3)
+        diffuse_color.append(1.0)
+        failed_layers = 0
+        names = ['print_model']
+        
         if with_failure:
             min_failed = round(num_layers/6)
             max_failed = round(num_layers/2)
@@ -44,13 +50,12 @@ class RandomPrint:
             for i in range(failed_layers):
                 gcode_api_.rand_vertex_move(bpy.data.objects[str(num_layers-i)])
                 print("Done layer " + str(num_layers-i))
-        gcode_api_.merge_layers(num_layers, failed_layers, with_failure=with_failure)
-        gcode_api_.transform_model('print_model', num_layers)
-        gcode_api_.transform_model('failed_model')
-
-        diffuse_color = gcode_api_.rand_populate_arr(self.diffuse_color, gcode_api_.rand_unif_range, 3)
-        diffuse_color.append(1.0)
-        gcode_api_.edit_part_appearance(diffuse_color=diffuse_color)
+            gcode_api_.merge_layers(num_layers, failed_layers, with_failure=True)
+            gcode_api_.edit_part_appearance('failed_model', diffuse_color=diffuse_color)  
+            names.extend(['failed_model'])
+        gcode_api_.merge_layers(num_layers, failed_layers, with_failure=False)
+        gcode_api_.edit_part_appearance('print_model', diffuse_color=diffuse_color)
+        gcode_api_.transform_model(names, num_layers)
         
         gcode_api_.save_render2(out_path, num_layers=num_layers, h_range=[5,60], bckg_transparent=True)
             
@@ -81,7 +86,7 @@ if __name__ == "__main__":
                                 num_lights=[1,3], light_energy=[20,50], range_l=[1.0,2.5],\
                                 num_rotation_steps=2, save=False, h_range=[20,50], bckg_transparent=True)
     gcode_files = glob(os.path.join(gcode_dir, "*"))
-    num_imgs_to_save = 1
+    num_imgs_to_save = 10
     num_gcodes_used = 0
     for i in range(num_imgs_to_save):
         gcode_file = get_filename(gcode_files, num_gcodes_used)

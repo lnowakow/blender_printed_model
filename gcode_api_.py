@@ -21,20 +21,22 @@ def import_gcode(filepath):
     bpy.ops.wm.gcode_import(filepath=filepath)
 
 
-def transform_model(name, num_layers=100):
-    # print_model holds all relevant data about Gcode
-    print_model = bpy.context.scene.objects[name]
+def transform_model(names, num_layers=100):
+    for name in names:
+        model = bpy.context.scene.objects[name]
+        # select Gcode object
+        bpy.context.view_layer.objects.active = model
+        bpy.context.active_object.select_set(state=True)    
+        if name == 'print_model':
+            bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
 
-    # select Gcode object
-    bpy.context.view_layer.objects.active = print_model
-    bpy.context.active_object.select_set(state=True)
-
-    # change origin of gcode to center of print_model
-    shift_origin(print_model)
-
-    # Scale the model down to real size
-    print_model.scale *= 0.01
-    print_model.location = [0, 0, 0]
+            bpy.context.scene.cursor.location = model.matrix_world.to_translation()
+            model.scale *= 0.01
+            model.location = [0, 0, 0]
+        else:
+            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+            model.scale *= 0.01
+            model.location = [0, 0, 0]
 
     #bpy.ops.object.modifier_add(type='BUILD')
     #print_model.modifiers['Build'].frame_duration = num_layers
@@ -46,7 +48,7 @@ def save_render2(path_out, num_layers, num_rotation_steps=2, h_range=[30, 80], b
     # set radius vector in polar coords
     r = Vector((camera.location[0], camera.location[1], camera.location[2])).length
     # set target
-    target = bpy.data.objects['print_model']
+    target = bpy.data.objects['failed_model']
     t_loc_x = target.location.x
     t_loc_y = target.location.y
     bpy.context.view_layer.objects.active = target
@@ -77,7 +79,7 @@ def save_render2(path_out, num_layers, num_rotation_steps=2, h_range=[30, 80], b
 
         #bpy.context.scene.frame_set(random.randint(2, num_layers))
         #bpy.context.scene.frame_set(num_layers)
-        
+       
         file = os.path.join(path_out, str(step_num))
         if bckg_transparent:
             bpy.context.scene.render.film_transparent = True
@@ -89,8 +91,9 @@ def save_render2(path_out, num_layers, num_rotation_steps=2, h_range=[30, 80], b
         bpy.context.scene.render.resolution_x = 5000  # 3840 #1920
         bpy.context.scene.render.resolution_y = 5000  # 3840 #1080
         bpy.ops.render.render(write_still=True)
-
-
+        
+        
+        
 def delete_layer_0():
     # Deselect all objects
     bpy.ops.object.select_all(action='DESELECT')
@@ -101,42 +104,44 @@ def delete_layer_0():
 
 def merge_layers(num_layers, failed_layers=0, with_failure=False):
     for obj in bpy.data.collections['Layers'].all_objects:
-        obj.select_set(True)
-    bpy.context.view_layer.objects.active = bpy.data.objects['1']
-    bpy.context.active_object.select_set(state=True)
-    # Convert to CURVE
-    bpy.ops.object.convert(target='CURVE')
+       obj.select_set(False)
+ 
     
-    # Deselect failed layers
-    for i in range(failed_layers):
-        bpy.data.objects[str(num_layers-i)].select_set(False)
-        print(f'failed layer {num_layers-i} deselected')
-    
-    # Make tool path populated with "filament"
-    bpy.ops.object.join()
-    print_model = bpy.data.objects['1']
-    print_model.name = 'print_model'
-    print_model.data.bevel_depth = 0.1
-    print_model.data.extrude = 0.2
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.transform.tilt(value=1.5707)
-    bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.context.view_layer.objects.active = bpy.data.objects[str(num_layers)]
-    bpy.context.active_object.select_set(state=True)
-    print_model.select_set(False)
+    if with_failure:
+        # Failed Layers
+        for i in range(failed_layers):
+            bpy.data.objects[str(num_layers-i)].select_set(True)
+            print(f'Failed layer {num_layers-i} selected')
+        # Make active object last layer
+        bpy.context.view_layer.objects.active = bpy.data.objects[str(num_layers)]
+        bpy.context.active_object.select_set(state=True)
+        # Convert to CURVE
+        bpy.ops.object.convert(target='CURVE')  
+        bpy.ops.object.join()
 
-    # Failed Layers
-    for i in range(failed_layers):
-        bpy.data.objects[str(num_layers-i)].select_set(True)
-        print(f'selected failed layer {num_layers-i}')   
+        failed_model = bpy.data.objects[str(num_layers)]
+        failed_model.name = 'failed_model'
+        failed_model.data.bevel_depth = 0.2
+    else:
+        # Make active object first layer
+        bpy.context.view_layer.objects.active = bpy.data.objects['1']
+        bpy.context.active_object.select_set(state=True)
+        # Successful Layers
+        for i in range(1, num_layers-failed_layers+1):
+            bpy.data.objects[str(i)].select_set(True)
+            print(f'Successful layer {i} selected')
+        # Convert to CURVE
+        bpy.ops.object.convert(target='CURVE')
+        # Make tool path populated with "filament"
+        bpy.ops.object.join()
+        print_model = bpy.data.objects['1']
+        print_model.name = 'print_model'
+        print_model.data.bevel_depth = 0.1
+        print_model.data.extrude = 0.2
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.transform.tilt(value=1.5707)
+        bpy.ops.object.mode_set(mode='OBJECT')
 
-    
-    bpy.ops.object.join()
-
-    failed_model = bpy.data.objects[str(num_layers)]
-    failed_model.name = 'failed_model'
-    failed_model.data.bevel_depth = 0.1
-    
 
 def add_lights(num_lights, light_energy=[10, 50], range_l=[1.0, 2.5]):
     # Inserts lights
@@ -169,11 +174,11 @@ def delete_all_obj(types):
         bpy.ops.object.delete()
 
 
-def edit_part_appearance(diffuse_color=[0.8, 0.2, 0.2, 1.0]):
+def edit_part_appearance(name, diffuse_color=[0.8, 0.2, 0.2, 1.0]):
     # Return to object mode
     bpy.ops.object.mode_set(mode='OBJECT')
 
-    print = bpy.data.objects['print_model']
+    print = bpy.data.objects[name]
     print.data.resolution_u = 20
     print.data.render_resolution_u = 32
 
@@ -210,7 +215,7 @@ def rand_vertex_move(obj):
     mat_world = obj.matrix_world
     for i in range(len(mesh.vertices)):
         vert = mesh.vertices[i]
-        vec = Vector((rand_normal(1), rand_normal(1), rand_normal(0.2)))
+        vec = Vector((rand_normal(0.5), rand_normal(0.5), rand_normal(0.2)))
         mat_edit = mat_world.inverted() @ Matrix.Translation(vec) @ mat_world
         vert.co = mat_edit @ vert.co
 

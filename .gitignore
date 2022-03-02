@@ -3,3 +3,4 @@ pictures/*.png
 __pycache__/
 .env
 pictures_cropped/
+failed_pictures/
