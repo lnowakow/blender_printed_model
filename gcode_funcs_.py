@@ -11,6 +11,7 @@ reload(gcode_api_)
 
 import bpy
 import numpy as np
+import math
 from glob import glob
 
 class RandomPrint:
@@ -42,7 +43,7 @@ class RandomPrint:
         names = ['print_model']
         
         if with_failure:
-            min_failed = round(num_layers/6)
+            min_failed = math.ceil(num_layers/6)
             max_failed = round(num_layers/2)
     
             failed_layers = gcode_api_.rand_unif_range([min_failed, max_failed], is_real=False)
@@ -86,7 +87,7 @@ if __name__ == "__main__":
                                 num_lights=[1,3], light_energy=[20,50], range_l=[1.0,2.5],\
                                 num_rotation_steps=2, save=False, h_range=[20,50], bckg_transparent=True)
     gcode_files = glob(os.path.join(gcode_dir, "*"))
-    num_imgs_to_save = 10
+    num_imgs_to_save = 1500
     num_gcodes_used = 0
     for i in range(num_imgs_to_save):
         gcode_file = get_filename(gcode_files, num_gcodes_used)
